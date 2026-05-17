@@ -598,7 +598,6 @@ window.addEventListener('DOMContentLoaded', () => {
       dataReady = true;
       renderAll();
       showToast('Loaded from local storage ✓','success');
-      setTimeout(function(){ loadFromSheet(); }, 500);
       return;
     } catch(e) {}
   }
