@@ -559,9 +559,13 @@ const PAGE_TITLES = {overview:'Overview',income:'Income',expenses:'Expenses',mon
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   updateConnStatus();
-  // Clear old localStorage so baked-in data takes priority
-  localStorage.removeItem('fl_bk_data');
-  const saved = null;
+  // Use version flag to seed data once, then let localStorage take over
+  const DATA_VERSION = 'v2_may2026';
+  if (localStorage.getItem('fl_data_version') !== DATA_VERSION) {
+    localStorage.removeItem('fl_bk_data');
+    localStorage.setItem('fl_data_version', DATA_VERSION);
+  }
+  const saved = localStorage.getItem('fl_bk_data');
   if (saved) {
     try {
       const d = JSON.parse(saved);
