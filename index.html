@@ -559,12 +559,7 @@ const PAGE_TITLES = {overview:'Overview',income:'Income',expenses:'Expenses',mon
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   updateConnStatus();
-  // Use version flag to seed data once, then let localStorage take over
-  const DATA_VERSION = 'v2_may2026';
-  if (localStorage.getItem('fl_data_version') !== DATA_VERSION) {
-    localStorage.removeItem('fl_bk_data');
-    localStorage.setItem('fl_data_version', DATA_VERSION);
-  }
+  // Load from localStorage if available, otherwise use baked-in seed data
   const saved = localStorage.getItem('fl_bk_data');
   if (saved) {
     try {
@@ -572,7 +567,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (d.income) INCOME = d.income;
       if (d.expenses) EXPENSES = d.expenses;
       if (d.memos) MEMOS = d.memos;
-      if (d.owner) OWNER_DIST = d.owner;
+      if (d.owner && Object.keys(d.owner).length > 0) OWNER_DIST = d.owner;
       if (d.gusto) GUSTO = d.gusto;
       // Ensure all expenses have _id
       EXPENSES.forEach((r,i) => { if(!r._id) r._id = 'e'+Date.now()+i; });
@@ -603,11 +598,11 @@ window.addEventListener('DOMContentLoaded', () => {
       dataReady = true;
       renderAll();
       showToast('Loaded from local storage ✓','success');
-      // Always sync from Sheets to get latest data
       setTimeout(function(){ loadFromSheet(); }, 500);
+      return;
     } catch(e) {}
   }
-  // Fall back to seed data
+  // Fall back to seed data only if localStorage didn't load
   loadSeedData();
 });
 
