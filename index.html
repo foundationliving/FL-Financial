@@ -598,7 +598,8 @@ window.addEventListener('DOMContentLoaded', () => {
       dataReady = true;
       renderAll();
       showToast('Loaded from local storage ✓','success');
-      return;
+      // Always sync from Sheets to get latest data
+      setTimeout(function(){ loadFromSheet(); }, 500);
     } catch(e) {}
   }
   // Fall back to seed data
