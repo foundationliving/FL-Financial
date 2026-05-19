@@ -130,8 +130,8 @@ tr:hover .row-actions{opacity:1}
 .badge-income{background:#eefbf3;color:#1e6b3d;border:1px solid #86e0aa}
 .badge-expense{background:#fff0f0;color:#a82828;border:1px solid #fcc8c8}
 .badge-paid{background:#eefbf3;color:#1e6b3d;border:1px solid #86e0aa}
-.badge-waiting{background:#fff9e6;color:#8b6914;border:1px solid #f5d87a}
-.badge-keep{background:#f5f6f8;color:var(--muted);border:1px solid var(--border)}
+.badge-waiting{background:#fde8e8;color:#b91c1c;border:1px solid #f4a0a0}
+.badge-keep{background:#e8f8ed;color:#2d7a4f;border:1px solid #a8dbb8}
 
 /* ── Month pills ── */
 .month-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
@@ -571,26 +571,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (d.gusto) GUSTO = d.gusto;
       // Ensure all expenses have _id
       EXPENSES.forEach((r,i) => { if(!r._id) r._id = 'e'+Date.now()+i; });
-      RECURRING = [
-        {desc:'Willow Rent',category:'Rent',status:'Paid/SR'},
-        {desc:'Country Club Rent/Gardener/Utilities',category:'Rent',status:'Paid/SR'},
-        {desc:'Ranch Rent/Gardener/Utilities',category:'Rent',status:'Paid/SR'},
-        {desc:'City of Sac - Water/Waste',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'SMUD (Country, Willow)',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'Solar',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'Xfinity',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'PG&E (Country, Willow)',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'Sobriety Hub',category:'Other',status:'Paid/SR'},
-        {desc:'Liability Insurance',category:'Other',status:'Paid/SR'},
-        {desc:'House Manager Pay',category:'House Manager Pay',status:'Paid/SR'},
-        {desc:'Loan Payback',category:'Loan Payback',status:'Paid/SR'},
-        {desc:'6k in acct for groceries/repair',category:'Groceries Reserve',status:'Keep in acct'},
-        {desc:'Verizon Internet',category:'Utilities & Internet',status:'Paid/SR'},
-        {desc:'Supplies',category:'Other',status:'Paid/SR'},
-        {desc:'Other',category:'Other',status:'Paid/SR'},
-        {desc:'Payroll Taxes',category:'Payroll Taxes',status:'Paid/SR'},
-        {desc:'W2 Payroll',category:'W2 Payroll',status:'Paid/SR'},
-      ];
+      RECURRING = [];
 
       const _expMonths = MONTH_ORDER.filter(m=>EXPENSES.some(r=>r.date===m));
       const _curM = getCurrentMonth();
@@ -598,7 +579,7 @@ window.addEventListener('DOMContentLoaded', () => {
       dataReady = true;
       renderAll();
       showToast('Loaded from local storage ✓','success');
-      setTimeout(function(){ loadFromSheet(); }, 1000);
+      // Auto-load from Sheets disabled - use manual Sync button to avoid overwriting local changes
       return;
     } catch(e) {}
   }
@@ -1265,11 +1246,13 @@ function renderMonthDetail(m) {
         <td style="width:18px;color:#c0c8d8;font-size:14px;cursor:grab;user-select:none;padding-right:4px">⠿</td>
         <td><span contenteditable="true" onblur="updateExpById('${eid}','description',this.innerText.trim())" style="display:block;font-weight:500;cursor:text;min-width:80px">${r.description}</span></td>
         <td style="text-align:right"><input type="text" value="${amtDisplay}" data-raw="${r.amount||0}" data-eid="${eid}" onfocus="this.style.borderBottomColor='var(--lime)';this.value=parseFloat(this.dataset.raw)>0?this.dataset.raw:'';this.select()" onblur="this.style.borderBottomColor='transparent';updateExpAmtById(this)" style="width:80px;text-align:right;font-weight:600;color:var(--red);border:none;border-bottom:1.5px solid transparent;border-radius:0;padding:3px 2px;font-family:inherit;font-size:12.5px;background:transparent;cursor:text;outline:none"></td>
-        <td><select class="filter-select" style="padding:3px 6px;font-size:11px;border-radius:6px;width:100%" data-eid="${eid}" onchange="updateExpById('${eid}','status',this.value)">${selOpts}</select></td>
+        <td><select class="filter-select" style="padding:3px 6px;font-size:11px;border-radius:6px;width:100%" data-eid="${eid}" onchange="updateExpById('${eid}','status',this.value);colorExpSelect(this)" ref="expSel">${selOpts}</select></td>
         <td><button class="row-btn del" onclick="deleteMthExpense(${i},'${m}')">Del</button></td>
       </tr>`;
     });
     initDragDrop();
+    // Color all expense status selects
+    document.querySelectorAll('#monthExpenseBody select').forEach(function(s){ colorExpSelect(s); });
   }
 }
 
@@ -1632,6 +1615,54 @@ function exportMonthlyReport() {
   setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
 }
 
+
+
+// Color expense status dropdowns
+function colorExpSelect(sel) {
+  var v = sel.value;
+  if (v === 'Paid/SR') {
+    sel.style.background = '#eefbf3'; sel.style.color = '#1e6b3d'; sel.style.borderColor = '#86e0aa';
+  } else if (v === 'Waiting') {
+    sel.style.background = '#fde8e8'; sel.style.color = '#b91c1c'; sel.style.borderColor = '#f4a0a0';
+  } else if (v === 'Keep in acct') {
+    sel.style.background = '#e8f8ed'; sel.style.color = '#2d7a4f'; sel.style.borderColor = '#a8dbb8';
+  } else {
+    sel.style.background = '#f5f6f8'; sel.style.color = '#6b7589'; sel.style.borderColor = '#d1d5db';
+  }
+}
+// Password Protection
+(function() {
+  function checkFinPw() {
+    var val = document.getElementById('pw-input').value;
+    var h = Array.from(val).reduce(function(h,ch){ return (Math.imul(31,h)+ch.charCodeAt(0))|0; }, 0);
+    if (h === 1629598) {
+      document.getElementById('pw-screen').style.display = 'none';
+      sessionStorage.setItem('fl_fin_auth','ok');
+    } else {
+      document.getElementById('pw-err').style.display = 'block';
+      document.getElementById('pw-input').value = '';
+    }
+  }
+  window.checkFinPw = checkFinPw;
+  document.addEventListener('DOMContentLoaded', function() {
+    if (sessionStorage.getItem('fl_fin_auth') !== 'ok') {
+      var s = document.getElementById('pw-screen');
+      if (s) s.style.display = 'flex';
+    }
+  });
+})();
 </script>
+<div id="pw-screen" style="display:none;position:fixed;inset:0;background:#0f2137;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px">
+  <div style="text-align:center">
+    <div style="font-family:'DM Sans',sans-serif;font-size:32px;font-weight:700;color:#fff">Foundation <span style="color:#4ade80">Living</span></div>
+    <div style="font-size:13px;color:#7ab3d4;margin-top:4px;letter-spacing:.08em;text-transform:uppercase">Financial Dashboard</div>
+  </div>
+  <div style="background:#1a3a5c;border-radius:12px;padding:28px 32px;text-align:center;min-width:280px">
+    <div style="font-size:13px;color:#7ab3d4;margin-bottom:12px">Enter Password</div>
+    <input id="pw-input" type="password" placeholder="Password" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #2a5a8c;background:#0f2137;color:#fff;font-size:16px;text-align:center;outline:none;letter-spacing:.2em" onkeydown="if(event.key==='Enter')checkFinPw()">
+    <button onclick="checkFinPw()" style="margin-top:12px;width:100%;padding:10px;border-radius:8px;background:#4ade80;color:#0f2137;font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:inherit">Unlock</button>
+    <div id="pw-err" style="color:#f87171;font-size:12px;margin-top:8px;display:none">Incorrect password</div>
+  </div>
+</div>
 </body>
 </html>
